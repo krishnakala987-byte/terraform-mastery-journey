@@ -35,7 +35,7 @@ resource "aws_instance" "server" {
   instance_type = var.env == "prod" ? var.instance_type : "t2.micro"
   
   vpc_security_group_ids = [aws_security_group.web_sg.id]
-  key_name = "terraform-key"
+  key_name = "ansible-demo"
   user_data = <<-EOF
               #!/bin/bash
               sudo apt update -y
