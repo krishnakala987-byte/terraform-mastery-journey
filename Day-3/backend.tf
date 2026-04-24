@@ -3,6 +3,6 @@ terraform {
     bucket         = "terraform-state-krishna-123"
     key            = "terraform.tfstate"
     region         = "us-east-1"
-    use_lockfile   = true
+    dynamodb_table = "terraform-lock"
   }
 }
