@@ -14,6 +14,7 @@ module "ec2" {
 
   # connect SG → EC2
   sg_id = module.security_group.sg_id
+  key_name = var.key_name
 }
 
 module "s3" {
