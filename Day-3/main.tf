@@ -1,7 +1,8 @@
 module "security_group" {
   source = "./modules/security_group"
 
-  env = var.env
+  env              = var.env
+  allowed_ssh_cidr = var.allowed_ssh_cidr   
 }
 
 module "ec2" {
@@ -11,7 +12,7 @@ module "ec2" {
   instance_type = var.instance_type
   env           = var.env
 
-  #  connecting security group output → ec2 input
+  # connect SG → EC2
   sg_id = module.security_group.sg_id
 }
 
