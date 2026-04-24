@@ -23,6 +23,10 @@ variable "allowed_ssh_cidr" {
   type        = string
 }
 
+variable "key_name" {
+  description = "EC2 Key Pair name"
+  type        = string
+}
 variable "bucket_name" {
   description = "S3 bucket name"
   type        = string
