@@ -1,141 +1,261 @@
-# Terraform Workspaces Multi-Environment Infrastructure on AWS
+# Terraform Multi-Environment Infrastructure with Workspaces + Modules + ALB + ASG
 
 ## Overview
 
-This project demonstrates how to use Terraform Workspaces to manage multiple environments (dev, qa, prod) using a single codebase. It focuses on state isolation, modular infrastructure design, and automated provisioning on AWS.
+This project demonstrates how to build production-style infrastructure using Terraform with:
 
-## Objective
+- Workspaces for environment separation (dev, qa, prod)
+- Modular architecture
+- Remote backend (S3 + DynamoDB)
+- Custom VPC networking
+- Security Groups
+- EC2 + Auto Scaling Group (ASG)
+- Application Load Balancer (ALB)
 
-The goal of this project is to:
+The same Terraform code dynamically creates isolated infrastructure for multiple environments without duplication.
 
-* Understand Terraform Workspaces for environment isolation
-* Avoid multiple code duplication for different environments
-* Dynamically provision infrastructure based on active workspace
-* Build reusable and scalable Terraform modules
+---
 
-## Core Concept: Terraform Workspaces
+## Architecture
 
-Terraform Workspaces allow managing multiple environments with a single configuration by maintaining separate state files.
+User → ALB → Target Group → Auto Scaling Group → EC2 Instances → VPC → Subnets
 
-Each workspace:
+Each environment (dev, qa, prod) has:
+- Separate state file
+- Separate infrastructure
+- Different instance sizes
 
-* Uses the same code
-* Maintains a separate state file
-* Creates independent infrastructure
-
-Workspaces used:
-
-* dev
-* qa
-* prod
-
-## Technologies Used
-
-* Terraform
-* AWS (EC2, VPC, S3, DynamoDB)
-* Nginx (via user_data)
-
-## Project Architecture
-
-* Custom VPC
-* Public Subnet
-* Internet Gateway
-* Route Table
-* Security Group (HTTP and SSH)
-* EC2 Instance with Nginx installed automatically
+---
 
 ## Key Concepts Implemented
 
-* Terraform Workspaces for multi-environment deployment
-* terraform.workspace variable for dynamic configuration
-* lookup() function for environment-based instance type selection
-* Modular architecture (VPC, EC2, Security Group)
-* user_data for automated server provisioning
-* Remote backend using S3
-* State locking using DynamoDB
+### 1. Terraform Workspaces
 
-## Step-by-Step Implementation
+Used to manage multiple environments:
 
-### Step 1: Initialize Terraform
+- dev
+- qa
+- prod
 
-terraform init
+Each workspace creates:
+- Separate infrastructure
+- Separate state file
 
-### Step 2: Create Workspaces
+Command examples:
 
+```
 terraform workspace new dev
-terraform workspace new qa
-terraform workspace new prod
-
-### Step 3: Select Workspace
-
-terraform workspace select dev
-
-### Step 4: Apply Infrastructure
-
-terraform apply
-
-### Step 5: Repeat for Other Environments
-
 terraform workspace select qa
-terraform apply
+terraform workspace show
+```
 
-terraform workspace select prod
-terraform apply
+---
 
-## Dynamic Configuration Example
+### 2. Dynamic Configuration
 
-Instance type changes based on workspace:
+Used:
 
-* dev → t2.micro
-* qa → t2.small
-* prod → t2.medium
+- terraform.workspace
+- lookup()
 
-Implemented using:
-lookup(var.instance_type_map, terraform.workspace)
+Example:
 
-## Output
+```
+instance_type = lookup(var.instance_type_map, terraform.workspace)
+```
 
-Get public URL:
-terraform output url
+This allows:
+- dev → small instance
+- qa → medium instance
+- prod → large instance
 
-Open in browser:
-http://<public-ip>
+---
 
-Each environment displays:
+### 3. Modular Structure
 
-* dev environment
-* qa environment
-* prod environment
+Reusable modules:
 
-## Remote Backend Configuration
-
-State is stored remotely using:
-
-* S3 bucket for state storage
-* DynamoDB for state locking
+```
+modules/
+├── vpc/
+├── security_group/
+├── ec2/
+├── alb/
+├── asg/
+```
 
 Benefits:
+- Reusability
+- Clean code
+- Production-ready structure
 
-* Prevents state conflicts
-* Enables team collaboration
-* Secures infrastructure state
+---
 
-## What I Built
+### 4. Custom VPC
 
-* Multi-environment infrastructure using a single Terraform codebase
-* Custom VPC networking setup
-* Secure EC2 deployment with automated Nginx setup
-* Dynamic infrastructure configuration using workspaces
-* Remote state management using S3 and DynamoDB
+- VPC creation
+- Public subnets (Multi-AZ)
+- Internet Gateway
+- Route tables
 
-## Key Learnings
+Important:
+ALB requires at least 2 subnets in different AZs.
 
-* Workspaces isolate state, not code
-* Dynamic infrastructure can be achieved using terraform.workspace
-* Modules improve reusability and scalability
-* Remote backend is essential for production-level infrastructure
-* Infrastructure must be automated, not manually configured
+---
 
-## Conclusion
+### 5. Security Group
 
-This project demonstrates practical implementation of Terraform Workspaces with modular infrastructure design, dynamic configuration, and remote state management, following real-world DevOps practices.
+- Allow HTTP (80)
+- Allow SSH (22)
+
+---
+
+### 6. EC2 + User Data
+
+EC2 instances are configured using user_data:
+
+```
+#!/bin/bash
+apt update
+apt install -y nginx
+systemctl start nginx
+echo "$(terraform.workspace) environment" > /var/www/html/index.html
+```
+
+This ensures:
+- No manual setup
+- Fully automated provisioning
+
+---
+
+### 7. Auto Scaling Group (ASG)
+
+- Maintains desired number of instances
+- Automatically replaces unhealthy instances
+
+---
+
+### 8. Application Load Balancer (ALB)
+
+- Distributes traffic across instances
+- Connected to ASG via target group
+
+---
+
+### 9. Remote Backend (S3 + DynamoDB)
+
+State stored in S3:
+- Safe
+- Centralized
+
+DynamoDB:
+- State locking
+- Prevents conflicts
+
+---
+
+## Outputs
+
+```
+terraform output alb_url
+```
+
+Example:
+
+```
+http://<alb-dns>
+```
+
+---
+
+## Project Workflow
+
+1. Initialize Terraform
+
+```
+terraform init
+```
+
+2. Create workspace
+
+```
+terraform workspace new dev
+```
+
+3. Apply infrastructure
+
+```
+terraform apply -auto-approve
+```
+
+4. Get URL
+
+```
+terraform output alb_url
+```
+
+---
+
+## Important Learnings
+
+- Never use single state for multiple environments
+- Workspaces prevent accidental infra destruction
+- Always design modules for reusability
+- ALB requires multiple AZ subnets
+- Avoid manual changes — use user_data
+- Remote backend is mandatory for real-world usage
+
+---
+
+## Common Issues Faced
+
+### 1. ALB creation failed
+
+Cause:
+- Only 1 subnet
+
+Fix:
+- Add 2 subnets in different AZs
+
+---
+
+### 2. Destroy stuck
+
+Cause:
+- Dependency chain (ALB → ASG → EC2 → subnet)
+
+Temporary Fix:
+```
+terraform destroy -target=module.asg
+terraform destroy -target=module.alb
+terraform destroy
+```
+
+Better approach:
+- Proper dependency handling
+
+---
+
+### 3. Nginx not working
+
+Cause:
+- user_data not executed properly
+
+Fix:
+- Ensure correct script
+- Check logs: /var/log/cloud-init-output.log
+
+---
+
+## Final Result
+
+- Multi-environment infrastructure
+- Fully automated setup
+- Load-balanced application
+- Production-like architecture
+
+---
+
+## Author
+
+Built as part of Terraform Mastery Journey.
