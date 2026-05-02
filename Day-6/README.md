@@ -44,19 +44,6 @@ Workspaces used:
 * Security Group (HTTP and SSH)
 * EC2 Instance with Nginx installed automatically
 
-## Project Structure
-
-.
-├── modules/
-│   ├── ec2/
-│   ├── vpc/
-│   └── security_group/
-├── main.tf
-├── variables.tf
-├── outputs.tf
-├── backend.tf
-└── README.md
-
 ## Key Concepts Implemented
 
 * Terraform Workspaces for multi-environment deployment
