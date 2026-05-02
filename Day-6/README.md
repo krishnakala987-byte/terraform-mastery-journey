@@ -21,18 +21,6 @@ This project demonstrates a production-style Infrastructure as Code (IaC) setup 
 * Remote backend using S3
 * State locking using DynamoDB
 
-## Project Structure
-
-.
-├── modules/
-│   ├── ec2/
-│   ├── vpc/
-│   └── security_group/
-├── main.tf
-├── variables.tf
-├── outputs.tf
-├── backend.tf
-└── README.md
 
 ## How to Run
 
