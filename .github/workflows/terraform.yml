@@ -35,8 +35,13 @@ jobs:
           set +e
           terraform plan -detailed-exitcode
           EXIT_CODE=$?
+          echo "Exit code is: $EXIT_CODE"
           echo "exitcode=$EXIT_CODE" >> $GITHUB_OUTPUT
           exit 0
+
+      - name: Debug Output
+        run: |
+          echo "Captured exit code: ${{ steps.plan.outputs.exitcode }}"
 
       - name: Slack Alert
         if: steps.plan.outputs.exitcode == '2'
