@@ -4,7 +4,7 @@ on:
   push:
   pull_request:
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '0 0 * * *'   # runs daily
 
 jobs:
   terraform:
@@ -15,12 +15,15 @@ jobs:
         working-directory: Day-8
 
     steps:
+      # 1️⃣ Checkout code
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # 2️⃣ Setup Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
 
+      # 3️⃣ Configure AWS credentials
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -28,14 +31,21 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
+      # 4️⃣ Terraform Init (important fix)
       - name: Terraform Init
-        run: terraform init -input=false
+        run: terraform init -input=false -reconfigure
 
+      # 5️⃣ Terraform Plan (Drift Detection ✅ FIXED)
       - name: Terraform Plan (Drift Detection)
         id: plan
         run: |
           set +e
-          terraform plan -detailed-exitcode -no-color > plan.txt
+
+          terraform plan \
+            -detailed-exitcode \
+            -refresh=true \
+            -no-color > plan.txt
+
           EXIT_CODE=$?
 
           echo "exitcode=$EXIT_CODE" >> $GITHUB_OUTPUT
@@ -48,26 +58,22 @@ jobs:
 
           exit 0
 
-      #  DRIFT ALERT (FIXED)
+      #  DRIFT ALERT
       - name: Slack Alert (Drift Detected)
         if: steps.plan.outputs.drift == 'true'
         run: |
           curl -X POST -H "Content-type: application/json" \
-          --data @- <<EOF \
+          --data "{
+            \"text\": \" *Terraform Drift Detected!*\nRepo: $GITHUB_REPOSITORY\nBranch: $GITHUB_REF_NAME\nRun: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID\n\n$(head -n 20 plan.txt)\"
+          }" \
           ${{ secrets.SLACK_WEBHOOK_URL }}
-          {
-            "text": " Terraform Drift Detected!\nRepo: $GITHUB_REPOSITORY\nBranch: $GITHUB_REF_NAME\nRun: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-          }
-          EOF
 
-      #  NO DRIFT ALERT (FIXED)
+      #  NO DRIFT ALERT
       - name: Slack Alert (No Drift)
         if: steps.plan.outputs.drift == 'false'
         run: |
           curl -X POST -H "Content-type: application/json" \
-          --data @- <<EOF \
+          --data "{
+            \"text\": \" No Terraform drift detected.\nRepo: $GITHUB_REPOSITORY\nBranch: $GITHUB_REF_NAME\"
+          }" \
           ${{ secrets.SLACK_WEBHOOK_URL }}
-          {
-            "text": " No Terraform drift detected.\nRepo: $GITHUB_REPOSITORY\nBranch: $GITHUB_REF_NAME"
-          }
-          EOF
