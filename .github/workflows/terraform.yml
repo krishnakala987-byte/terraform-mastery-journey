@@ -35,11 +35,9 @@ jobs:
         id: plan
         run: |
           set +e
-
-          terraform plan -detailed-exitcode -no-color | tee plan.txt
+          terraform plan -detailed-exitcode -no-color > plan.txt
           EXIT_CODE=$?
 
-          echo "Exit code: $EXIT_CODE"
           echo "exitcode=$EXIT_CODE" >> $GITHUB_OUTPUT
 
           if [ $EXIT_CODE -eq 2 ]; then
@@ -50,22 +48,16 @@ jobs:
 
           exit 0
 
-      #  DRIFT ALERT
       - name: Slack Alert (Drift Detected)
         if: steps.plan.outputs.drift == 'true'
         run: |
           curl -X POST -H "Content-type: application/json" \
-          --data "{
-            \"text\": \" *Terraform Drift Detected!*\n*Repo:* $GITHUB_REPOSITORY\n*Branch:* $GITHUB_REF_NAME\n*Run:* $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID\n\n*Details:*\n$(head -n 20 plan.txt)\"
-          }" \
+          --data "{\"text\":\" Terraform Drift Detected! Check run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID\"}" \
           ${{ secrets.SLACK_WEBHOOK_URL }}
 
-      #  NO DRIFT ALERT
       - name: Slack Alert (No Drift)
         if: steps.plan.outputs.drift == 'false'
         run: |
           curl -X POST -H "Content-type: application/json" \
-          --data "{
-            \"text\": \" *No Terraform drift detected.*\n*Repo:* $GITHUB_REPOSITORY\n*Branch:* $GITHUB_REF_NAME\"
-          }" \
+          --data "{\"text\":\" No Terraform drift detected\"}" \
           ${{ secrets.SLACK_WEBHOOK_URL }}
