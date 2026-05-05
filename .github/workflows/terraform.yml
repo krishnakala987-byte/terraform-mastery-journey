@@ -29,7 +29,6 @@ jobs:
       - name: Terraform Init
         run: terraform init -input=false
 
-      #  CAPTURE DRIFT + SAVE OUTPUT
       - name: Terraform Plan (Drift Detection)
         id: plan
         run: |
@@ -47,30 +46,22 @@ jobs:
 
           exit 0
 
-      #  DRIFT ALERT (WITH DETAILS + LINK)
+      #  DRIFT ALERT
       - name: Slack Alert (Drift Detected)
         if: steps.plan.outputs.drift == 'true'
         run: |
-          MESSAGE=" *Terraform Drift Detected!*
-Repo: $GITHUB_REPOSITORY
-Branch: $GITHUB_REF_NAME
-Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
-
-Details:
-$(head -n 20 plan.txt)"
-
-          curl -X POST -H 'Content-type: application/json' \
-          --data "{\"text\":\"$MESSAGE\"}" \
+          curl -X POST -H "Content-type: application/json" \
+          --data "{
+            \"text\": \" Terraform Drift Detected!\nRepo: $GITHUB_REPOSITORY\nBranch: $GITHUB_REF_NAME\nRun: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID\n\nDetails:\n$(head -n 20 plan.txt)\"
+          }" \
           ${{ secrets.SLACK_WEBHOOK_URL }}
 
-      #  SUCCESS MESSAGE (NO DRIFT)
+      #  NO DRIFT ALERT
       - name: Slack Alert (No Drift)
         if: steps.plan.outputs.drift == 'false'
         run: |
-          MESSAGE=" No Terraform drift detected.
-Repo: $GITHUB_REPOSITORY
-Branch: $GITHUB_REF_NAME"
-
-          curl -X POST -H 'Content-type: application/json' \
-          --data "{\"text\":\"$MESSAGE\"}" \
+          curl -X POST -H "Content-type: application/json" \
+          --data "{
+            \"text\": \" No Terraform drift detected.\nRepo: $GITHUB_REPOSITORY\nBranch: $GITHUB_REF_NAME\"
+          }" \
           ${{ secrets.SLACK_WEBHOOK_URL }}
