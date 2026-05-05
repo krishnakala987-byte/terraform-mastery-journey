@@ -28,28 +28,16 @@ jobs:
 
       - name: Terraform Init
         run: terraform init -input=false
-   
+  
       - name: Terraform Plan (Drift Detection)
         id: plan
         run: |
-          set +e
-          terraform plan -detailed-exitcode -no-color
-          EXIT_CODE=$?
-
-          echo "Exit code is: $EXIT_CODE"
-
-          if [ $EXIT_CODE -eq 2 ]; then
-            echo "DRIFT=true" >> $GITHUB_ENV
-          else
-           echo "DRIFT=false" >> $GITHUB_ENV
-          fi
-
-          exit 0
-
-          #check
+          terraform plan -detailed-exitcode
+          echo "exitcode=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
 
       - name: Slack Alert
-        if: env.DRIFT == 'true'
+        if: steps.plan.outputs.exitcode == '2'
         run: |
           curl -X POST -H 'Content-type: application/json' \
           --data '{"text":" Terraform Drift Detected!"}' \
