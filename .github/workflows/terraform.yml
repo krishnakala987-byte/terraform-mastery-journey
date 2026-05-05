@@ -4,7 +4,7 @@ on:
   push:
   pull_request:
   schedule:
-    - cron: '0 0 * * *'   # runs daily (optional but production-like)
+    - cron: '0 0 * * *'
 
 jobs:
   terraform:
@@ -31,16 +31,12 @@ jobs:
       - name: Terraform Init
         run: terraform init -input=false
 
-      #  DRIFT DETECTION STEP (CORE LOGIC)
       - name: Terraform Plan (Drift Detection)
         id: plan
         run: |
           set +e
-
           terraform plan -detailed-exitcode -no-color > plan.txt
           EXIT_CODE=$?
-
-          echo "Terraform Exit Code: $EXIT_CODE"
 
           echo "exitcode=$EXIT_CODE" >> $GITHUB_OUTPUT
 
@@ -50,33 +46,28 @@ jobs:
             echo "drift=false" >> $GITHUB_OUTPUT
           fi
 
-          echo "------ PLAN OUTPUT (Preview) ------"
-          head -n 20 plan.txt
-
           exit 0
 
-      #  SLACK ALERT (DRIFT DETECTED)
+      #  DRIFT ALERT (FIXED)
       - name: Slack Alert (Drift Detected)
         if: steps.plan.outputs.drift == 'true'
         run: |
           curl -X POST -H "Content-type: application/json" \
-          --data "{
-            \"text\": \" *Terraform Drift Detected!*\n
-Repo: $GITHUB_REPOSITORY\n
-Branch: $GITHUB_REF_NAME\n
-Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID\n
-\nDetails (first 20 lines):\n$(head -n 20 plan.txt)\"
-          }" \
+          --data @- <<EOF \
           ${{ secrets.SLACK_WEBHOOK_URL }}
+          {
+            "text": " Terraform Drift Detected!\nRepo: $GITHUB_REPOSITORY\nBranch: $GITHUB_REF_NAME\nRun: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          }
+          EOF
 
-      #  SLACK ALERT (NO DRIFT)
+      #  NO DRIFT ALERT (FIXED)
       - name: Slack Alert (No Drift)
         if: steps.plan.outputs.drift == 'false'
         run: |
           curl -X POST -H "Content-type: application/json" \
-          --data "{
-            \"text\": \" *No Terraform drift detected.*\n
-Repo: $GITHUB_REPOSITORY\n
-Branch: $GITHUB_REF_NAME\"
-          }" \
+          --data @- <<EOF \
           ${{ secrets.SLACK_WEBHOOK_URL }}
+          {
+            "text": " No Terraform drift detected.\nRepo: $GITHUB_REPOSITORY\nBranch: $GITHUB_REF_NAME"
+          }
+          EOF
