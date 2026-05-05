@@ -30,11 +30,13 @@ jobs:
         run: terraform init -input=false
 
       - name: Terraform Plan (Drift Detection)
-        run: terraform plan -detailed-exitcode
-          
-      - name: Notify Slack (Drift Detected)
-        if: failure()
+        id: plan
+        run: |
+          terraform plan -detailed-exitcode
+        continue-on-error: true
+      - name: Slack Alert
+        if: steps.plan.outcome == 'failure'
         run: |
           curl -X POST -H 'Content-type: application/json' \
-          --data '{"text":"Terraform Drift Detected in Day-8 project!"}' \
+          --data '{"text":"🚨 Terraform Drift Detected!"}' \
           ${{ secrets.SLACK_WEBHOOK_URL }}
