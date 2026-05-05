@@ -1,0 +1,7 @@
+aws_instance.my_ec2: Refreshing state... [id=i-0b12c716b25453451]
+
+No changes. Your infrastructure matches the configuration.
+
+Terraform has compared your real infrastructure against your configuration
+and found no differences, so no changes are needed.
+Releasing state lock. This may take a few moments...
