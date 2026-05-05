@@ -32,9 +32,11 @@ jobs:
       - name: Terraform Plan (Drift Detection)
         id: plan
         run: |
+          set +e
           terraform plan -detailed-exitcode
-          echo "exitcode=$?" >> $GITHUB_OUTPUT
-        continue-on-error: true
+          EXIT_CODE=$?
+          echo "exitcode=$EXIT_CODE" >> $GITHUB_OUTPUT
+          exit 0
 
       - name: Slack Alert
         if: steps.plan.outputs.exitcode == '2'
