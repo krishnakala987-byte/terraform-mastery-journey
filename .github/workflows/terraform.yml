@@ -2,11 +2,7 @@ name: Terraform Drift Detection
 
 on:
   push:
-    paths:
-      - 'Day-8/**'
   pull_request:
-    paths:
-      - 'Day-8/**'
 
 jobs:
   terraform:
