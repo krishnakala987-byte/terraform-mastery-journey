@@ -33,10 +33,12 @@ jobs:
         id: plan
         run: |
           terraform plan -detailed-exitcode
+          echo "exitcode=$?" >> $GITHUB_OUTPUT
         continue-on-error: true
+
       - name: Slack Alert
-        if: steps.plan.outcome == 'failure'
+        if: steps.plan.outputs.exitcode == '2'
         run: |
           curl -X POST -H 'Content-type: application/json' \
-          --data '{"text":"🚨 Terraform Drift Detected!"}' \
+          --data '{"text":" Terraform Drift Detected in Day-8!"}' \
           ${{ secrets.SLACK_WEBHOOK_URL }}
