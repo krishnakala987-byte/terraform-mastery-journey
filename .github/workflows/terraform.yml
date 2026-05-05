@@ -28,24 +28,28 @@ jobs:
 
       - name: Terraform Init
         run: terraform init -input=false
-
+   
       - name: Terraform Plan (Drift Detection)
         id: plan
         run: |
           set +e
-          terraform plan -detailed-exitcode
+          terraform plan -detailed-exitcode -no-color
           EXIT_CODE=$?
+
           echo "Exit code is: $EXIT_CODE"
-          echo "exitcode=$EXIT_CODE" >> $GITHUB_OUTPUT
+
+          if [ $EXIT_CODE -eq 2 ]; then
+            echo "DRIFT=true" >> $GITHUB_ENV
+          else
+           echo "DRIFT=false" >> $GITHUB_ENV
+          fi
+
           exit 0
 
-      - name: Debug Output
-        run: |
-          echo "Captured exit code: ${{ steps.plan.outputs.exitcode }}"
 
       - name: Slack Alert
-        if: steps.plan.outputs.exitcode == '2'
+        if: env.DRIFT == 'true'
         run: |
           curl -X POST -H 'Content-type: application/json' \
-          --data '{"text":" Terraform Drift Detected in Day-8!"}' \
+          --data '{"text":" Terraform Drift Detected!"}' \
           ${{ secrets.SLACK_WEBHOOK_URL }}
