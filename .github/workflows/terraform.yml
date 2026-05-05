@@ -29,19 +29,19 @@ jobs:
       - name: Terraform Init
         run: terraform init -input=false
 
-     - name: Terraform Plan (Drift Detection)
-       id: plan
-       run: |
-         terraform plan | tee plan.txt
-         if grep -q "No changes" plan.txt; then
-           echo "drift=false" >> $GITHUB_OUTPUT
-         else
-           echo "drift=true" >> $GITHUB_OUTPUT
-         fi
+      - name: Terraform Plan (Drift Detection)
+        id: plan
+        run: |
+          terraform plan | tee plan.txt
+          if grep -q "No changes" plan.txt; then
+            echo "drift=false" >> $GITHUB_OUTPUT
+          else
+            echo "drift=true" >> $GITHUB_OUTPUT
+          fi
 
-     - name: Slack Alert
-       if: steps.plan.outputs.drift == 'true'
-       run: |
-         curl -X POST -H 'Content-type: application/json' \
-         --data '{"text":" Terraform Drift Detected!"}' \
-         ${{ secrets.SLACK_WEBHOOK_URL }}
+      - name: Slack Alert
+        if: steps.plan.outputs.drift == 'true'
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data '{"text":"Terraform Drift Detected in your infrastructure!"}' \
+          ${{ secrets.SLACK_WEBHOOK_URL }}
