@@ -46,6 +46,7 @@ jobs:
 
           exit 0
 
+          #check
 
       - name: Slack Alert
         if: env.DRIFT == 'true'
